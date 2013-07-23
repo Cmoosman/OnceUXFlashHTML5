@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+
+		<!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
+		Remove this if you use the .htaccess -->
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+
+		<title>OnceUX HTML 5 POC</title>
+		<meta name="description" content="" />
+
+		<style>
+
+			body{
+			 background:#fff;
+			 color:#333;
+			 font:14px "Helvetica Neue",Arial,Helvetica,Geneva,sans-serif;
+			}
+ 
+		</style>
+
+	</head>
+
+	<body>
+		<div>
+			<header>
+				
+			</header>
+			<nav>
+				
+			</nav>
+
+			<div>
+			<table style="width: 100%">
+				<!--tr>
+					<td valign="top" >
+						<input id="loadOASURL" type="text" style="width:100%;">  
+					</td>
+					<td valign="top">
+						<input id="btn_loadOASURL" type="button" value="Load OnceUX URL" >  
+					</td>
+				</tr-->
+				<tr>
+					<td valign="top" style="width:520px;">
+						<div id="playerWrapper" style="width: 520px; height: 290px">
+							<div id="flashContent"></div>
+                            <div id="html5Content"></div>
+							<div id="adOverlay" style="display: none; visibility: hidden"></div>
+						</div>
+					</td>
+					<td align="left" valign="top">
+						Ad specific companion banner:<br/>
+						<div id="bannerContainer"></div>
+					</td>
+				</tr>
+				<tr style="width:100%;">
+					<td valign="top" colspan="2">
+						<div>
+                            <strong>Player State :</strong> <span id="playerState">Inactive</span>
+                            <span style="width:50px;"></span>
+                            <strong>Time :</strong> <span  id="currentTime">0</span>
+                            <span style="width:50px;"></span>
+                            <strong>Duration :</strong> <span id="totalTime">0</span>
+                        </div>
+                        <div>
+                            <table cellpadding="3">
+                                <tr>
+                                    <td align="right"><strong>Playhead Time (milliseconds):</strong></td>
+                                    <td align="left"><span  id="currentTimeMS">0</span></td>
+                                </tr>
+                            </table>
+
+                        </div>
+                        <div>
+                            <table cellpadding="3">
+                                <tr>
+                                    <td align="right"><strong>Consumed Time (milliseconds):</strong></td>
+                                    <td align="left"><span id="consumedTime">0</span></td>
+                                </tr>
+                            </table>
+                        </div>
+						<div>
+							<strong>Current OnceUX URL:</strong> <span  id="currentOASURL"></span>
+						</div>
+						<div>
+							<strong>Current Once URL:</strong> <span  id="currentOnceURL"></span>
+						</div>
+						<br/>
+						<table style="width:100%;" cellpadding="4" cellspacing="4">
+							<tr>
+								<td valign="top" >
+									<table style="width:100%;" cellpadding="5" cellspacing="5">
+										<tr>
+											<td valign="top">
+												<strong>Upcoming Ads:</strong><br/>
+												<textarea id="upcomingAds" style="width: 100%; height: 200px;"></textarea>
+											</td>
+											<td valign="top">
+												<strong>Current Ads:</strong><br/>
+												<textarea id="currentAds" style="width: 100%; height: 200px;"></textarea>
+											</td>
+											<td valign="top">
+												<strong>Completed Ads:</strong><br/>
+												<textarea id="completedAds" style="width: 100%; height: 200px;"></textarea>
+											</td>
+										</tr>
+										<tr>
+											<td valign="top" colspan="3">
+												<strong>Player Events:</strong><br/>
+												<textarea id="eventsBeacons" style="width: 100%; height: 200px"></textarea>
+											</td>
+										</tr>
+										<tr>
+											<td valign="top" colspan="3">
+												<strong>Tracking Events:</strong><br/>
+												<textarea id="trackingEvents" style="width: 100%; height: 200px"></textarea>
+											</td>
+										</tr>
+									</table>		
+								</td>
+								<td valign="top">
+									<strong>VMAP Response:</strong><br/>
+									<textarea id="vmapResponse" style="width:520px; height: 800px;"></textarea>
+								</td>
+							</tr>
+						</table>
+						
+					</td>
+				</tr>
+				
+			</table>	
+				
+				
+				
+				
+			</div>
+
+			<footer>
+				<p>
+					
+				</p>
+			</footer>
+		</div>
+		<script src="http://code.jquery.com/jquery-1.7.1.min.js" type="text/javascript"></script>
+		<script src="js/jquery-flash.min.js" type="text/javascript"></script>
+		<script src="js/onceux.js" type="text/javascript"></script>
+		<script src="js/onceux.vod.js" type="text/javascript"></script>
+		<script src="js/onceux.sdk.js" type="text/javascript"></script>
+		<script src="js/onceux.admanager.js" type="text/javascript"></script>
+		<script src="js/onceux.beaconmanager.js" type="text/javascript"></script>
+        <script src="js/onceux.utils.js" type="text/javascript"></script>
+        <script src="js/onceux.vod.uimanager.js" type="text/javascript"></script>
+		
+		
+		<script type="text/javascript">
+		//Functions
+		var init;
+		
+		//Global Vars
+		var _upcomingAds = [];
+		var _currentAds = [];
+		var _completedAds = [];
+		var _trackingUrls = [];
+
+		var assetDuration;
+        var player;
+        var playerState;
+        var adCountDownTimer;
+        var currentRunningAdTime = 0;
+		var rawAssetDuration = 0;
+        var consumedTimerRunning = false;
+        var consumedTimerTick = 150;
+        var consumedTimeMs = 0;
+        var consumedTimer;
+        var consumedLastTime;
+        var controlTime;
+        var controlLastTime;
+        var bufferingDetectedSamples = 0;
+        var forcedBufferTimer;
+        var forcedBufferTimerRunning = false;
+        var initialPlayheadTime = 0;
+        var gotInitialTime = false;
+        var lastTime = 0;
+        var setPlayerType = 0; //0 = HTML5, 1 = Flash
+        var flashPlayerID;
+
+
+        /**
+			 * Setup JS bridge for communication with Flash Player
+			 * 
+			 * @playerId : we set this id in attrs variable here;
+			 * @event : event name;
+			 * @obj : data of that event.
+			 * 
+			 */
+			function onJSBridge(playerId, event, obj) {
+
+				switch(event) {
+			        case "onJavaScriptBridgeCreated":
+			            // reference to player
+                        flashPlayerID = playerId;
+			            player = document.getElementById(playerId);
+                        player.addEventListener("mediaPlayerStateChange", "handlePlayerStateChange");
+			        break;
+			        case "loadstart":
+			        	var loadEvent = "Load Start Event"; 
+						UXUtilsManager.writeToEventConsole(loadEvent + event);
+			        break;
+			        case "play":
+			        	var playEvent = "Play Start Event"; 
+						UXUtilsManager.writeToEventConsole(playEvent + event + '\n' + 'Ended: ' + obj.ended + '\n' + 'Paused: ' + obj.paused);
+			        break;
+			        case "pause":
+			        	var pauseEvent = "Play Paused Event"; 
+						UXUtilsManager.writeToEventConsole(pauseEvent  + event + '\n' + 'Paused:' + obj.paused);
+			        break;
+			        case "loadedmetadata":
+			        	var loadMetadataEvent = "Load Metadata Event"; 
+						UXUtilsManager.writeToEventConsole(loadMetadataEvent  + event + '\n' + 'Ready State: '  + obj.readyState);
+			        break;
+			        case "seeking":
+			        	var seekingEvent = "Seeking Event"; 
+						UXUtilsManager.writeToEventConsole(seekingEvent  + event + '\n' + 'Seeking: ' + obj.seeking);
+			        break;
+			        case "seeked":
+			        	
+			        break;
+			        case "volumechange":
+			        	var volumeChangedEvent = "Volume Changed Event"; 
+						UXUtilsManager.writeToEventConsole(volumeChangedEvent + event + '\n' + 'Muted: '  + obj.muted + '\n' + 'Volume Level: ' + obj.volume);
+			        break;
+			        case "durationchange":
+			        	
+			        	var durationChangedEvent = "Duration Changed Event"; 
+						UXUtilsManager.writeToEventConsole(durationChangedEvent  + event + '\n' + obj.duration);
+			        	
+			        	var assetDuration = UXUtilsManager.formatTime(obj.duration);
+			        	$('#totalTime').html(assetDuration);
+			        break;
+			        case "timeupdate":
+			        	
+			        		var currentRawTime = obj.currentTime;
+
+                    		//basic ad configurations
+							var readableCurrentTime = UXUtilsManager.formatTime(currentRawTime);
+							assetDuration = $('#totalTime').text(); 
+							rawAssetDuration = UXUtilsManager.getRawTime(assetDuration);
+
+							//display current time and asset duration in UI
+							$('#currentTime').html(readableCurrentTime);
+                            $('#currentTimeMS').html(currentRawTime);
+
+			        break;
+			        case "complete":
+						var completeEvent = "Complete Event"; 
+						UXUtilsManager.writeToEventConsole(completeEvent  + event);
+					break;
+			        default:
+			            
+			        break;
+			    }
+			}
+        function handlePlayerStateChange(state) {
+            playerState = state;
+            console.log("Player state change " + state);
+            $('#playerState').html(state);
+
+            if (state == "playing") {
+                if (!consumedTimerRunning) {
+                    consumedLastTime = new Date().getTime();
+                    consumedTimer = setInterval(consumedTimerHandler, consumedTimerTick);
+                    consumedTimerRunning = true;
+                }
+            }
+            else {
+                clearInterval(consumedTimer);
+                consumedTimerRunning = false;
+            }
+        }
+
+        function handleHtmlPlayerStateChange(playerEvent) {
+
+            var player = $('#html5Content').find('video');
+
+            if (playerEvent.type != "timeupdate") {
+
+            }
+            if(navigator.userAgent.match(/iPad/i) || navigator.userAgent.match(/iPhone/i)) {
+                var videoControl = document.getElementById('videoPlayer');
+                var vidCurrentTime = videoControl.currentTime * 1000;
+                onCurrentTimeChange(vidCurrentTime, 0);
+            }
+            else {
+                if (playerEvent.type == "playing" && !consumedTimerRunning) {
+                    handlePlayerStateChange("playing");
+                }
+                else if (playerEvent.type == "timeupdate") {
+
+                    // This is for debug only in UI
+                    var readableCurrentTime = UXUtilsManager.formatTime(player[0].currentTime);
+                    var currentRawTime = player[0].currentTime * 1000;
+                    var duration = UXUtilsManager.formatTime(player[0].duration);
+
+                    //display current time and asset duration in UI
+                    $('#currentTime').html(readableCurrentTime);
+                    var num = parseInt(currentRawTime, 10);
+                    $('#currentTimeMS').html(num);
+                    $('#totalTime').html(duration);
+
+                }
+                else if (consumedTimerRunning) {
+                    handlePlayerStateChange("notplaying");
+                }
+            }
+        }
+        function consumedTimerHandler() {
+            var currentSystemTime = new Date().getTime();
+            var systemTimeDiff = currentSystemTime - consumedLastTime;
+            consumedTimeMs += systemTimeDiff;
+            onCurrentTimeChange(consumedTimeMs, null);
+            consumedLastTime = currentSystemTime;
+
+            if(setPlayerType == 1){
+                player = document.getElementById(flashPlayerID);
+                // Sample control time to catch nontriggered buffer
+                controlTime = player.getCurrentTime() * 1000;
+            }
+            else{
+                var player = $('#html5Content').find('video');
+                // Sample control time to catch nontriggered buffer
+                controlTime = player[0].currentTime * 1000;;
+            }
+
+            // Check if control time hasn't moved since last time signaling that we missed a buffer event (or one wasn't sent)
+            if (controlTime == controlLastTime) {
+                bufferingDetectedSamples++;
+            }
+
+            // Sample control time to catch big forward jump
+            // Check if there was a large jump forward in timecode signaling that android skipped forward a few chunks
+            if (controlTime - consumedLastTime > 2000) {
+                consumedTimeMs += controlTime - consumedLastTime;
+            }
+
+            if (!forcedBufferTimerRunning && bufferingDetectedSamples >= 3) {
+                // Subtract detect interval since we found a valid nonplaying state
+                consumedTimeMs -= consumedTimerTick * 3;
+                bufferingDetectedSamples = 0;
+                // Trigger forced player state change
+                handlePlayerStateChange("buffering");
+                // Start timer to check for updates
+                forcedBufferTimer = setInterval(forcedBufferTimerHandler, 500);
+                forcedBufferTimerRunning = true;
+            }
+
+            controlLastTime = controlTime;
+        }
+
+        function forcedBufferTimerHandler() {
+
+            if(setPlayerType == 1){
+                // Sample control time to catch nontriggered buffer
+                controlTime = player.getCurrentTime() * 1000;
+            }
+            else{
+                var player = $('#html5Content').find('video');
+                // Sample control time to catch nontriggered buffer
+                controlTime = player[0].currentTime * 1000;
+            }
+
+            if (controlTime > controlLastTime) {
+
+                // We are playing again - stop this timer restart consumed timer and go on our merry way
+                clearInterval(forcedBufferTimer);
+                forcedBufferTimerRunning = false;
+                handlePlayerStateChange("playing");
+            }
+        }
+
+        function onCurrentTimeChange(time, playerId) {
+            //if (!gotInitialTime || time - lastTime >= 10000 || lastTime - time >= 10000) {
+            if (!gotInitialTime) {
+                initialPlayheadTime = time;
+                gotInitialTime = true;
+            }
+
+            var modifiedCurrentTime = time - initialPlayheadTime;
+
+            if (lastTime == 0 || time - lastTime >= 1000 || lastTime - time >= 1000) {
+                lastTime = time;
+            }
+
+            UX.updateCurrentTime(modifiedCurrentTime);
+             $("#consumedTime").html(modifiedCurrentTime);
+
+        }
+
+        function onAdSlotRegistered(adSlot) {
+				_upcomingAds.push(adSlot);
+				populateDebugTables();
+			}
+			
+        function onAdSlotStart(adSlot) {
+
+            for(var i = 0; i < _upcomingAds.length; i++) {
+                if (_upcomingAds[i].adId == adSlot.adId) {
+                    _currentAds.push(adSlot);
+                    _upcomingAds.splice(i, 1);
+                }
+            }
+
+            populateDebugTables();
+        }
+
+        function onAdSlotEnd(adSlot) {
+
+            for(var i = 0; i < _currentAds.length; i++) {
+                if (_currentAds[i].adId == adSlot.adId) {
+                    _completedAds.push(adSlot);
+                    _currentAds.splice(i, 1);
+                }
+            }
+
+
+            $("#playerWrapper").off('click');
+
+            populateDebugTables();
+        }
+
+        function onTrackingUrlFired(trackingUrl) {
+            _trackingUrls.push(trackingUrl);
+            populateDebugTables();
+        }
+
+        function onOnceUrl(onceUrl) {
+            //display asset Once URL in UI
+            $("#currentOnceURL").html(onceUrl);
+
+            if(setPlayerType == 1){
+                if(navigator.userAgent.match(/iPad/i) || navigator.userAgent.match(/android/i)) {
+                    //create HTML5 video player embed object
+                    var videoTag = "";
+                    videoTag += '<video id="videoPlayer" type="video/mp4" width="520" height="290" controls="true" >';
+                    videoTag += '  <source src="' + videoSRC +'" />';
+                    videoTag += '</video>';
+                    $("#html5Content").html(videoTag);
+
+                    $('#videoPlayer').bind('timeupdate', handleHtmlPlayerStateChange);
+                    $('#videoPlayer').bind('playing', handleHtmlPlayerStateChange);
+                    $('#videoPlayer').bind('pause', handleHtmlPlayerStateChange);
+                    $('#videoPlayer').bind('waiting', handleHtmlPlayerStateChange);
+                    $('#videoPlayer').bind('seeking', handleHtmlPlayerStateChange);
+                    $('#videoPlayer').bind('seeked', handleHtmlPlayerStateChange);
+
+                }
+                else {
+
+                    //create video player and setup player events
+                    $('#flashContent').flash(
+                            {
+                                id: 'StrobeMediaPlayback',
+                                name: 'StrobeMediaPlayback',
+                                src: 'StrobeMediaPlayback.swf',
+                                width: 520,
+                                height: 290,
+                                allowFullScreen: 'true',
+                                wmode: 'opaque',
+                                flashvars: { src: onceUrl, javascriptCallbackFunction: 'onJSBridge',  plugin_M3U8Plugin: 'M3U8Plugin.swf'}
+
+                            });
+                }
+            }
+            else{
+                //create HTML5 video player embed object
+                var videoTag = "";
+                videoTag += '<video id="videoPlayer" type="video/mp4" width="520" height="290" controls="true" >';
+                videoTag += '  <source src="' + onceUrl +'" />';
+                videoTag += '</video>';
+                $("#html5Content").html(videoTag);
+
+                $('#videoPlayer').bind('timeupdate', handleHtmlPlayerStateChange);
+                $('#videoPlayer').bind('playing', handleHtmlPlayerStateChange);
+                $('#videoPlayer').bind('pause', handleHtmlPlayerStateChange);
+                $('#videoPlayer').bind('waiting', handleHtmlPlayerStateChange);
+                $('#videoPlayer').bind('seeking', handleHtmlPlayerStateChange);
+                $('#videoPlayer').bind('seeked', handleHtmlPlayerStateChange);
+            }
+        }
+
+        function onCompanionAd(companionAd) {
+
+            if(companionAd.adDefinition.companionAds.length){
+                var currentBannerURL = companionAd.adDefinition.companionAds[0].staticResource;
+                var currentAdClickURL = companionAd.adDefinition.companionAds[0].companionClickThrough;
+            }
+            else{
+                var currentBannerURL = "";
+                var currentAdClickURL = "";
+            }
+
+            //clear the ad slot banner
+            $("#bannerContainer").html("");
+
+            $("#playerWrapper").click(function(){
+                //window.location = _currentAdClickURL;
+                window.open(currentAdClickURL, "_blank");
+            });
+
+            //Set up ad slot configuration for companion banners
+            var companionBannerTag = "";
+            companionBannerTag += '<a href="' + currentAdClickURL +'" target="_blank"><img id="companionBanner"  width="300" height="250" alt="" src="' + currentBannerURL +'"/></a>';
+            $("#bannerContainer").html(companionBannerTag);
+        }
+
+        function populateDebugTables() {
+            var upcomingAdsText = "";
+            var currentAdsText = "";
+            var completedAdsText = "";
+            var trackingUrlsText = "";
+
+            for (var i = 0; i < _upcomingAds.length; i++) {
+                var adSlot = _upcomingAds[i];
+                upcomingAdsText = upcomingAdsText + "AdSlotID:: "  + adSlot.adId + " Duration::" + adSlot.adDefinition.duration + "ms \r\n";
+            }
+
+            $("#upcomingAds")[0].value = upcomingAdsText;
+
+            for (var i = 0; i < _currentAds.length; i++) {
+                var adSlot = _currentAds[i];
+                currentAdsText = currentAdsText + "AdSlotID:: "  + adSlot.adId + " Duration::" + adSlot.adDefinition.duration + "ms \r\n";
+            }
+
+            $("#currentAds")[0].value = currentAdsText;
+
+            for (var i = 0; i < _completedAds.length; i++) {
+                var adSlot = _completedAds[i];
+                completedAdsText = completedAdsText + "AdSlotID:: "  + adSlot.adId + " Duration::" + adSlot.adDefinition.duration + "ms \r\n";
+            }
+
+            $("#completedAds")[0].value = completedAdsText;
+
+            for (var i = 0; i < _trackingUrls.length; i++) {
+                var trackingUrl = _trackingUrls[i];
+                trackingUrlsText = trackingUrlsText + "TrackingUrl:: " + trackingUrl.adId + ", TimePostion: " + trackingUrl.timePosition + ", URL: " + trackingUrl.url + "\r\n";
+            }
+
+            $("#trackingEvents")[0].value = trackingUrlsText;
+
+        }
+
+			$(document).ready(function () {
+								
+				//handles getting the VMAP response via ajax
+				init = function() {
+                    //VOD on Bens machine
+                    //http://192.168.111.47/now/od/auto/f595a230-c918-4449-9b43-117a27c54256/8557a44b-7c4e-4194-82bc-cca41a7c8dd6/more/content.once Smart XML
+                    //http://192.168.111.48/now/ads/vmap/od/auto/f595a230-c918-4449-9b43-117a27c54256/226b2d51-7c03-4852-9473-981c735ff9af/ep01/ true duration
+                    //http://192.168.111.48/now/ads/vmap/od/auto/f595a230-c918-4449-9b43-117a27c54256/af16b6f3-c330-4396-bbcd-a95d5b74b58d/rammstein Bens machine
+
+                    //VOD QA
+					//http://oas.qa.unicornapp.com/now/ads/vmap/od/auto/f595a230-c918-4449-9b43-117a27c54256/226b2d51-7c03-4852-9473-981c735ff9af/ep01/ QA with quartile offset m3u8
+					//http://oas.qa.unicornapp.com/now/ads/vmap/adaptive/m3u8/f595a230-c918-4449-9b43-117a27c54256/226b2d51-7c03-4852-9473-981c735ff9af/ep01/ QA
+
+                    //VOD Prod
+                    //http://onceux.unicornmedia.com/now/ads/vmap/od/auto/b11dbc9b-9d90-4edb-b4ab-769e0049209b/2455340c-8dcd-412e-a917-c6fadfe268c7/3a41c6e4-93a3-4108-8995-64ffca7b9106/bigbuckbunny?umtp=0 Prod
+                    //http://oas.unicornmedia.com/now/ads/vmap/adaptive/m3u8/b11dbc9b-9d90-4edb-b4ab-769e0049209b/0b4b1b29-f173-4f20-8cd6-5fe12a2e70b3/more Prod
+                    //http://oas.unicornmedia.com/now/ads/vmap/od/auto/b11dbc9b-9d90-4edb-b4ab-769e0049209b/0b4b1b29-f173-4f20-8cd6-5fe12a2e70b3/more
+
+
+                    //Whether Channel Prod
+                    //http://onceux.unicornmedia.com/now/ads/vmap/adaptive/m3u8/f21d8e33-8e2f-460c-965d-e4939d60d203/b28f6614-7f20-439e-a786-0ff3f52ad3c9/6dd47988-8671-4119-9db3-b2d8191cb9ce/content.once?umsessionkey=6CBDEEAC582847FB92D33190035549E1&UMADPARAMiu=%252F7646%252Fapp_iphone_us%252Fvideo%252Fmust_see&UMPTPARAMcust_params=sz%253D320x568%2526pos%253Dtop300%2526tile%253D1%2526cc%253DUS%2526st%253DGA%2526zip%253D30337%2526dma%253D524%2526cid%253D44%2526tmpr%253Dwarm%2526tmp%253D80h%2526cnd%253Dsun%2526locale%253Den_US%2526dvice%253DiPhone5_1_ios_6_1_3%2526ver%253Diphonestandard_5_3_1%2526plln%253Dme%2526wind%253Dlo%2526uv%253Dhi%2526hmid%253Dlo%2526iu%253D%252F7646%252Fapp_iphone_us%252Fvideo%252Fmust_see%2526lat%253Dnl%2526lng%253Dnl%2526piq%253DplaceIQ%2526zcs%253DhyperLocal
+					//http://onceux.unicornmedia.com/now/ads/vmap/adaptive/m3u8/f21d8e33-8e2f-460c-965d-e4939d60d203/b28f6614-7f20-439e-a786-0ff3f52ad3c9/8f012b30-a799-4f49-8479-a510a18d02fa/content.once?umsessionkey=6CBDEEAC582847FB92D33190035549E1&UMADPARAMiu=%252F7646%252Fapp_iphone_us%252Fvideo%252Fmust_see&UMPTPARAMcust_params=sz%253D320x568%2526pos%253Dtop300%2526tile%253D1%2526cc%253DUS%2526st%253DGA%2526zip%253D30337%2526dma%253D524%2526cid%253D44%2526tmpr%253Dwarm%2526tmp%253D80h%2526cnd%253Dsun%2526locale%253Den_US%2526dvice%253DiPhone5_1_ios_6_1_3%2526ver%253Diphonestandard_5_3_1%2526plln%253Dme%2526wind%253Dlo%2526uv%253Dhi%2526hmid%253Dlo%2526iu%253D%252F7646%252Fapp_iphone_us%252Fvideo%252Fmust_see%2526lat%253Dnl%2526lng%253Dnl%2526piq%253DplaceIQ%2526zcs%253DhyperLocal
+
+                    //CBS Prod
+                    //http://onceux.unicornmedia.com/now/ads/vmap/od/auto/c9cd5ffb-e591-4566-8141-d79c05703b80/af2f2540-00f8-471e-b9e7-2464f8da642c/c72cd60c-934f-49df-a00b-b48df490777a?UMPTPARAMcust_params=vid%3D2A9910B4-63C7-5CA2-4846-973C81E29C0A%26partner%3Dcbs_ipad_app
+                    //http://onceux.unicornmedia.com/now/ads/vmap/od/auto/c9cd5ffb-e591-4566-8141-d79c05703b80/af2f2540-00f8-471e-b9e7-2464f8da642c/f0138b63-5b53-4de7-8c78-c4f03c077047?UMPTPARAMcust_params=vid%3D620579253%26partner%3Dcbs_ipad_app
+
+
+                    var manifestUrlBase = "http://192.168.111.167:85/now/live/auto/b9805fca-b3a0-4ce0-9c21-ac7f482c1d05/5657a92a-aeb1-49b6-a777-47d51799cb90/bb37d800-9baa-4ef5-bd8f-32d2c5e5da33/content.m3u8";
+					var onceUXServiceURL = "http://oas.unicornmedia.com/now/ads/vmap/od/auto/b11dbc9b-9d90-4edb-b4ab-769e0049209b/0b4b1b29-f173-4f20-8cd6-5fe12a2e70b3/more";
+
+                    //Rest intial consumed time
+                    consumedTimeMs = consumedTimerTick;
+					//VOD 
+	                $("#currentOASURL").html(onceUXServiceURL);
+	                UX.init(onceUXServiceURL);// VOD
+	                
+	                //LIVE
+	                //$("#currentOASURL").html(manifestUrlBase);
+	                //UX.init(manifestUrlBase);// LIVE
+					
+					UX.addEventListener('onAdSlotRegistered', onAdSlotRegistered);
+					UX.addEventListener('onAdSlotStart', onAdSlotStart);
+					UX.addEventListener('onAdSlotEnd', onAdSlotEnd);
+					UX.addEventListener('onTrackingUrlFired', onTrackingUrlFired);
+					UX.addEventListener('onOnceUrl', onOnceUrl);
+                    UX.addEventListener('onCompanionAd', onCompanionAd);
+				}
+				
+				//fire the init on document ready to load up and parse the OAS URL
+				init();
+            });
+            
+        
+		</script>
+	</body>
+</html>
